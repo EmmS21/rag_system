@@ -1,14 +1,15 @@
 from retrieval.mongo_retrieval import retrieve_relevant_documents
 from generation.generate_response import ResponseGenerator
+from generation.extract_relevant_snippets import extract_relevant_snippets
 
 def rag_workflow(query):
     # Retrieve relevant documents based on the query
     documents = retrieve_relevant_documents(query, top_n=5)
-    print('docs', documents)
+    relevant_snippets = extract_relevant_snippets(documents, query)
     
     # Prepare the context for the generative model
     # This example simply concatenates the text of each document. Adjust as needed.
-    combined_texts = " ".join([doc['text'] for doc in documents])  # Adjust 'text' based on your document schema
+    combined_texts = " ".join(relevant_snippets)
     
     # Generate a response based on the combined texts
     generator = ResponseGenerator(model="gpt-3.5-turbo")  # Specify the model
