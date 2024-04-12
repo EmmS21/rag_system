@@ -1,10 +1,11 @@
 from pymongo import MongoClient
 import requests
-import fitz  
 from io import BytesIO
 from dotenv import load_dotenv
-from embeddings.text_to_embeddings import TextToEmbeddings
+# from embeddings.text_to_embedding import TextToEmbeddings
 import os
+from embeddings.generate_embeddings import generate_embedding
+
 
 load_dotenv()
 
@@ -20,33 +21,19 @@ client = MongoClient(mongodb_uri)
 db = client[db_name]
 collection = db[collection_name]
 
-# BERT setup
-tokenizer = BertTokenizer.from_pretrained('google-bert/bert-base-multilingual-uncased')
-model = BertModel.from_pretrained('google-bert/bert-base-multilingual-uncased')
-
-def fetch_and_extract_text_from_pdf(url):
-    response = requests.get(url)
-    if response.status_code == 200:
-        with fitz.open(stream=BytesIO(response.content), filetype="pdf") as doc:
-            text = ""
-            for page in doc:
-                text += page.get_text()
-            return text
-    else:
-        print(f"Failed to fetch PDF from {url}")
-        return ""
-
 def update_document_embeddings():
     for document in collection.find({}):
         texts = []
-        for url in document.get("urls", []):
-            text = fetch_and_extract_text_from_pdf(url)
+        for text in document.get("full_text", []):
             if text:
                 texts.append(text)
         if texts:
             full_text = " ".join(texts)
-            embeddings = text_to_embeddings.generate(full_text)
-            collection.update_one({'_id': document['_id']}, {'$set': {'embeddings': embeddings}})
+            try:
+                embeddings = generate_embedding(full_text)
+                collection.update_one({'_id': document['_id']}, {'$set': {'embeddings': embeddings}})
+            except ValueError as e:
+                print(f"Error processing document {document['_id']}: {e}")
         else:
             print(f"No text found for document {document['_id']}")
 

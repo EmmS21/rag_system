@@ -1,4 +1,4 @@
-from retrieval.mongo_retrieval import retrieve_relevant_documents
+from mongo_retrieval import retrieve_relevant_documents
 from generation.generate_response import ResponseGenerator
 from generation.extract_relevant_snippets import extract_relevant_snippets
 
@@ -18,6 +18,6 @@ def rag_workflow(query):
     return response
 
 if __name__ == "__main__":
-    query = "Compare and contrast tax laws in Colombia and Brazil?"
+    query = "What are the regulations for foreign exchange operations in Colombia?"
     response = rag_workflow(query)
     print("Response:", response)
