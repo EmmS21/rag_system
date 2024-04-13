@@ -1,14 +1,11 @@
 import spacy
 
-# Load the multilingual model
-nlp = spacy.load("xx_ent_wiki_sm")
+nlp = spacy.load("en_core_web_md")
 
-# Add the sentencizer component to the pipeline
 if 'sentencizer' not in nlp.pipe_names:
     sentencizer = nlp.add_pipe('sentencizer')
 
-# Increase the max_length to accommodate larger texts
-nlp.max_length = 10000000  # Setting to 10 million characters
+nlp.max_length = 10000000  
 
 def extract_relevant_snippets(docs, query):
     """
@@ -18,10 +15,8 @@ def extract_relevant_snippets(docs, query):
     :param query: Query string used to generate response.
     :return: List of relevant snippets from the documents.
     """
-    print('query', query)
     query_doc = nlp(query)
     snippets = []
-
 
     for doc in docs:
         # Assuming 'text' contains the full document text
@@ -39,10 +34,9 @@ def extract_relevant_snippets(docs, query):
         
         similarities = []
         for sent in doc_nlp.sents:
-            # Avoid calculating similarity for empty sentences
             if sent.text.strip():
                 similarities.append((sent, query_doc.similarity(sent)))
-        # Sort sentences by similarity and select the top 3
+        # Sort sentences by similarity and select the top 10
         sorted_sents = sorted(similarities, key=lambda x: x[1], reverse=True)[:10]
         snippets.extend([sent[0].text for sent in sorted_sents])
     return snippets

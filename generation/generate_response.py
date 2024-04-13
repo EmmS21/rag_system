@@ -18,13 +18,16 @@ class ResponseGenerator:
         Note: The max_tokens, temperature, and n parameters have been removed
         to align with the updated API. Adjustments may be needed based on available options.
         """
+        instruction = "Translate the following text to English if needed and explain it in simple terms:"
+        formatted_input = f"{instruction}\n\n{input_text}"
         response = client.chat.completions.create(
             messages=[
                 {
                     "role": "user",
-                    "content": input_text,
+                    "content": formatted_input,
                 }
             ],
             model=self.model,
         )
         return response.choices[0].message.content.strip()
+        

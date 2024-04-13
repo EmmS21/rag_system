@@ -2,8 +2,8 @@ from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
 import requests
-from bs4 import BeautifulSoup  # For HTML parsing
-import fitz  # PyMuPDF, for PDF processing
+from bs4 import BeautifulSoup  
+import fitz  
 
 load_dotenv()
 
@@ -43,21 +43,16 @@ def extract_text_from_url(url):
     return text
 
 def update_documents_with_text():
-    """
-    Update documents with the entire text to possibly replicate the BSONObjectTooLarge error.
-    This function aggregates all text from URLs into a single large string per document.
-    """
-    for document in collection.find({}):
-        full_text = ""
-        for url in document.get("urls", []):
-            text = extract_text_from_url(url)
-            full_text += text + " "  # Append each text block with a space
-
-        if full_text:
+    """ Update documents with the entire text from the corresponding URL. """
+    for document in collection.find({"full_text": {"$exists": False}}):
+        url = document.get("url")
+        text = extract_text_from_url(url)
+        if text:
             try:
-                collection.update_one({'_id': document['_id']}, {'$set': {'full_text': full_text}})
+                collection.update_one({'_id': document['_id']}, {'$set': {'full_text': text}})
+                print(f"Updated document {document['_id']} with text from {url}")
             except Exception as e:
-                print(f"Failed to update document {_id}: {e}")
+                print(f"Failed to update document {document['_id']}: {e}")
         else:
             print(f"No text found for document {document['_id']}")
 
