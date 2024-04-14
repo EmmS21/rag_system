@@ -3,7 +3,7 @@ from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
 import numpy as np
-from embeddings.generate_embeddings import generate_embeddings
+from .embeddings.generate_embeddings import generate_embeddings
 
 # Load environment variables
 load_dotenv()
