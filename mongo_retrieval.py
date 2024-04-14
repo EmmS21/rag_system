@@ -1,11 +1,10 @@
+import cProfile
 from pymongo import MongoClient
+import gridfs
 import os
 from dotenv import load_dotenv
-from transformers import pipeline, BertTokenizer, BertModel
-import torch
+import numpy as np
 from embeddings.generate_embeddings import generate_embedding
-
-# from ..generate_embeddingsembeddings.generate_embeddings import generate_embedding
 
 # Load environment variables
 load_dotenv()
@@ -14,74 +13,62 @@ mongodb_uri = os.getenv('MONGODB_URI')
 db_name = os.getenv('DB_NAME')
 collection_name = os.getenv('COLLECTION_NAME')
 
+# Connect to MongoDB
 client = MongoClient(mongodb_uri)
 db = client[db_name]
 collection = db[collection_name]
+fs = gridfs.GridFS(db)
 
-# # Translation pipeline initialization using a specific model for English to Spanish translation
-# translation_pipeline = pipeline("translation_en_to_es", model="Helsinki-NLP/opus-mt-en-es")
+def fetch_embeddings(embeddings_file_ids):
+    """Fetch all embeddings once and store them in a dictionary."""
+    embeddings = {}
+    for file_id in embeddings_file_ids:
+        embedding_bytes = fs.get(file_id).read()
+        embeddings[file_id] = np.frombuffer(embedding_bytes, dtype=np.float32)
+    return embeddings
 
-# class TextToEmbeddings:
-#     def __init__(self, model_name='bert-base-multilingual-cased'):
-#         self.tokenizer = BertTokenizer.from_pretrained(model_name)
-#         self.model = BertModel.from_pretrained(model_name)
-#         self.model.eval()  # Ensure the model is in evaluation mode
+def process_document(document, embeddings, query_embedding, query_embedding_dim, min_similarity):
+    embeddings_file_ids = document.get("embeddings_file_ids", [])
+    embeddings_chunks = [embeddings[file_id] for file_id in embeddings_file_ids if file_id in embeddings]
 
-#     def generate(self, text):
-#         # Generate embeddings for the text
-#         inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
-#         with torch.no_grad():
-#             outputs = self.model(**inputs)
-#         # Use the pooler_output as the embedding representation
-#         return outputs.last_hidden_state.mean(dim=1).squeeze().tolist()
+    if embeddings_chunks:
+        combined_embedding = np.concatenate(embeddings_chunks)
+        combined_embedding = combined_embedding.reshape(-1, query_embedding_dim)
+        combined_embedding = np.mean(combined_embedding, axis=0)
+        combined_embedding = np.array(combined_embedding)
 
-# # Instantiate TextToEmbeddings
-# text_to_embeddings = TextToEmbeddings()
+        query_embedding_np = np.array(query_embedding)
 
-# def translate_to_spanish(text):
-#     # Translate English text to Spanish
-#     translated_text = translation_pipeline(text)[0]['translation_text']
-#     return translated_text
+        similarity = np.dot(combined_embedding, query_embedding_np) / (np.linalg.norm(combined_embedding) * np.linalg.norm(query_embedding_np))
+
+        if similarity >= min_similarity:
+            return document, similarity
+    return None
 
 def retrieve_relevant_documents(query, top_n=5, num_candidates=50, min_similarity=0.1):
-    # Translate the query to Spanish
-    # query_in_spanish = translate_to_spanish(query)
-    # print("Translated Query in Spanish:", query_in_spanish)
+    query_embedding = generate_embedding(query)
+    query_embedding_dim = len(query_embedding)
 
+    # Fetch candidate documents and prefetch all embeddings
+    candidates = list(collection.find({}, {"embeddings_file_ids": 1, "full_text": 1}).limit(num_candidates))
+    all_file_ids = {file_id for candidate in candidates for file_id in candidate.get("embeddings_file_ids", [])}
+    embeddings = fetch_embeddings(all_file_ids)
 
-    # query_embedding = text_to_embeddings.generate(query_in_spanish)
-    # print('Number of dimensions in query embedding:', len(query_embedding))
+    relevant_documents = []
+    for candidate in candidates:
+        result = process_document(candidate, embeddings, query_embedding, query_embedding_dim, min_similarity)
+        if result:
+            relevant_documents.append(result)
 
-    # Perform a vector search in MongoDB
-    results = collection.aggregate([
-        {
-            "$vectorSearch": {
-                "index": "vector_index",
-                "path": "embeddings",
-                "queryVector": generate_embedding(query),
-                "numCandidates": num_candidates,
-                "limit": top_n,
-            }
-        },
-        {
-            "$sort": {"similarity": -1}  # Sort by similarity score in descending order
-        },
-        {
-            "$limit": top_n  # Limit the number of results
-        }
-    ])
-    relevant_texts = []
-    for result in results:
-        similarity_score = result.get("similarity", 0)  # Get the similarity score
-        relevant_text = result.get("full_text", "")
-        # print("Similarity Score:", similarity_score)  # Print the similarity score
-        relevant_texts.append(relevant_text)
-
+    relevant_documents.sort(key=lambda x: x[1], reverse=True)
+    relevant_texts = [doc[0]["full_text"] for doc in relevant_documents[:top_n]]
 
     return relevant_texts
 
-# Test query
-# test_query = "What are the regulations for foreign exchange operations in Colombia?"
-# relevant_texts = retrieve_relevant_documents(test_query)
-# print("Relevant Texts:", relevant_texts)
+def main():
+    test_query = "What are the regulations for foreign exchange operations in Colombia?"
+    relevant_texts = retrieve_relevant_documents(test_query)
+    print("Relevant Texts:", relevant_texts)
 
+if __name__ == '__main__':
+    cProfile.run('main()', 'profile_output')
