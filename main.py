@@ -1,5 +1,5 @@
 # main.py
-from retrieval.mongo_retrieval import retrieve_relevant_documents
+from mongo_retrieval import retrieve_relevant_documents
 
 def main():
     # Example query

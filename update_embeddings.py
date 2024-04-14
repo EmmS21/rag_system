@@ -3,7 +3,7 @@ import requests
 from io import BytesIO
 from dotenv import load_dotenv
 import os
-from embeddings.generate_embeddings import generate_embedding
+from embeddings.generate_embeddings import generate_embeddings
 
 load_dotenv()
 username = os.getenv('MONGODB_USERNAME')
@@ -26,15 +26,17 @@ def update_document_embeddings():
                 # First, delete any existing embeddings for this document
                 embeddings_collection.delete_many({"document_id": document["_id"]})
 
-                # Generate and store a new embedding for the entire document text
-                embedding = generate_embedding(full_text)
-                embedding_document = {
-                    "document_id": document["_id"],
-                    "embedding": embedding
-                }
-                embeddings_collection.insert_one(embedding_document)
+                # Generate and store hierarchical embeddings for the document
+                embeddings = generate_embeddings(full_text)
+                for segment_id, segment_embedding in embeddings.items():
+                    embedding_document = {
+                        "document_id": document["_id"],
+                        "segment_id": segment_id,
+                        "embedding": segment_embedding
+                    }
+                    embeddings_collection.insert_one(embedding_document)
                 print(f"Embeddings updated for document {document['_id']}")
-            except ValueError as e:
+            except Exception as e:
                 print(f"Error processing document {document['_id']}: {e}")
         else:
             print(f"No text found for document {document['_id']}")

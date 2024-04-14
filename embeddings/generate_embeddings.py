@@ -1,38 +1,33 @@
-import requests
-import numpy as np
+from transformers import AutoTokenizer, AutoModel
+import torch
 
-def generate_embedding(text: str) -> list[float]:
-    hf_token = "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"
-    embedding_url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
-    max_length = 50000  # Adjust based on trial to avoid payload limit
+def generate_embeddings(text: str):
+    """
+    Generate hierarchical embeddings for the given text using a multilingual BERT model.
 
-    parts = [text[i:i + max_length] for i in range(0, len(text), max_length)]
-    embeddings = []
+    Args:
+        text (str): The text to generate embeddings for.
 
-    for part in parts:
-        response = requests.post(
-            embedding_url,
-            headers={"Authorization": f"Bearer {hf_token}"},
-            json={"inputs": part}
-        )
-        if response.status_code == 200:
-            part_embedding = response.json()
-            if isinstance(part_embedding, list) and len(part_embedding) == 384:
-                embeddings.append(part_embedding)
-            else:
-                print(f"Malformed embedding data: {part_embedding}")  # More detailed error information
-                raise ValueError("Received malformed embedding data")
-        else:
-            raise ValueError(f"Request failed with status code {response.status_code}: {response.text}")
+    Returns:
+        dict: A dictionary mapping segment IDs to their corresponding embeddings.
+    """
+    # Load the tokenizer and model
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
+    model = AutoModel.from_pretrained("bert-base-multilingual-cased")
 
-    if embeddings:
-        # If multiple embeddings are received, average them
-        if len(embeddings) > 1:
-            embedding_arrays = [np.array(embed) for embed in embeddings]
-            avg_embedding = np.mean(embedding_arrays, axis=0).tolist()
-            return avg_embedding
-        else:
-            # If only one embedding, return it directly
-            return embeddings[0]
+    # Tokenize the text
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
 
-    return []
+    # Generate embeddings
+    with torch.no_grad():
+        outputs = model(**inputs)
+        embeddings = outputs.last_hidden_state.mean(dim=1).squeeze().numpy()
+
+    # Split embeddings into segments (e.g., paragraphs)
+    segment_embeddings = {}
+    for i, start in enumerate(range(0, len(embeddings), 384)):
+        end = start + 384
+        segment_id = f"segment_{i}"
+        segment_embeddings[segment_id] = embeddings[start:end].tolist()
+
+    return segment_embeddings
