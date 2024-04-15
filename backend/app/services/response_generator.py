@@ -12,15 +12,16 @@ class ResponseGenerator:
 
     async def generate(self, input_text, query):
         prompt = (f"Given the following detailed context and other information you have access to, "
-                  f"answer the question: '{query}'. Explain things back to me simply, assuming I do not have "
+                  f"'{query}'. Explain things back to me simply, assuming I do not have "
                   f"a legal background.\n\nContext:\n{input_text}")
         response = self.client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model=self.model,
             stream=True
         )
-        for chunk in response:
-            if chunk.choices[0].delta.content is not None:
-                yield chunk.choices[0].delta.content
-            else:
-                yield ""  # Yield an empty string instead of None
+        try:
+            for chunk in response:
+                if chunk.choices[0].delta.content is not None:
+                    yield f"data: {chunk.choices[0].delta.content}\n\n"
+        finally:
+            yield "event: end-of-stream\ndata: end\n\n"  # Signal the end of the stream
