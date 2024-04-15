@@ -1,11 +1,17 @@
 <script lang="ts">
-    // You would define your message data and other relevant data here
+    import { onMount, afterUpdate } from 'svelte';
     let messages = [
       { id: 1, content: "What would you like to learn about buying property in Colombia as a foreign national?" },
     ];
 
     let inputText = '';
     let waitingForResponse = false; 
+    let chatContainer: { scrollTop: any; scrollHeight: any; };
+
+    function handleClearChat() {
+        messages = [messages[0]]; 
+    }
+
 
     function handleKeyPress(event: { key: string; }) {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -13,10 +19,28 @@
        }
     }
 
+    function scrollToBottom() {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    onMount(scrollToBottom);
+    afterUpdate(scrollToBottom);
+
+
+
     let ongoingMessageContent = ""; 
     let activeMessageId = messages.length + 1; 
     
     async function sendMessage() {
+        if (inputText.trim() === '') return;
+        const newMessage = { id: activeMessageId, content: inputText };
+        messages = [...messages, newMessage];
+        activeMessageId++;
+        inputText = '';
+
+        const userQueries = messages.filter(msg => msg.id % 2 !== 0).map(msg => msg.content);
+        userQueries.push(inputText);  
+
         waitingForResponse = true;
         messages = [...messages, { id: activeMessageId, content: "" }];
 
@@ -25,13 +49,15 @@
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ query: inputText })
+            body: JSON.stringify({ 
+                query: inputText,
+                context: userQueries.length > 0 ? userQueries.join("\n") : undefined  
+            })
         });
 
         if (response.ok) {
             const data = await response.json();
             const queryId = data.query_id;
-            // messages = [...messages, { id: activeMessageId, content: "" }];
 
             const eventSource = new EventSource(`http://localhost:8000/stream/${queryId}/`);
             eventSource.onmessage = function(event) {
@@ -57,12 +83,11 @@
         }
     }
 
-
-
     let profile = {
         name: "PropAbroadBot",
         details: "A Bot to help you navigate legal issues of investing in real estate in Colombia as a foreign national",
     };
+
   </script>
   
   <style>
@@ -82,23 +107,25 @@
     }
   
     .chat {
-      width: 70%;
-      background-color: #777; 
-      padding: 1em;
-      margin-left: 20px; 
-      border-radius: 10px;
-      margin-top: 20px; 
-      position: relative;
+        position: relative;
+        width: 70%;
+        background-color: #777; 
+        padding: 1em 1em 60px 1em; 
+        padding: 1em;
+        margin-left: 20px; 
+        border-radius: 10px;
+        margin-top: 20px; 
+        position: relative;
+        overflow-y: scroll; 
+        height: 70vh;    
     }
 
     .message-input-container {
         display: flex;
         align-items: center;
-        position: absolute;
         bottom: 0;
         left: 0;
         width: calc(100% - 40px); 
-        margin-bottom: 20px;
         margin-left: 20px;
     }
 
@@ -164,12 +191,6 @@
     .profile-info p {
       margin: 0; 
       color: #666; 
-    }
-
-  
-    .link {
-      color: #1a0dab;
-      text-decoration: none;
     }
   
     .logo {
@@ -249,6 +270,19 @@
         background-color: transparent;
         animation: typing 2s steps(40) infinite;
     }
+
+    .grey-background {
+        background-color: #c2c0c0; 
+    }
+
+    .send-icon.disabled {
+        pointer-events: none;
+        opacity: 0.5;
+    }
+
+    .profile-tab.disabled {
+        cursor: default;
+    }
   </style>
   
   <svelte:head>
@@ -261,36 +295,35 @@
   </header>
   
   <main>
-    <div class="chat">
+    <div class="chat" bind:this={chatContainer}>
         {#each messages as message}
-          <div class="message">
-            {#if message.id % 2 === 1}
-              <svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="7" r="4" />
-                <path d="M2 20a15.6 15.6 0 0 1 7-6.5 4 4 0 0 1 5.33 0A15.6 15.6 0 0 1 22 20z" />
-              </svg>
-            {/if}
-            <div class="typing-animation">{message.content}</div>
-            {#if waitingForResponse}
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
-                <circle cx="4" cy="12" r="2" fill="currentColor">
-                    <animate attributeName="r" begin=".67" calcMode="spline" dur="1.5s" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" repeatCount="indefinite" values="0;2;0;0"/>
-                </circle>
-                <circle cx="12" cy="12" r="2" fill="currentColor">
-                    <animate attributeName="r" begin=".33" calcMode="spline" dur="1.5s" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" repeatCount="indefinite" values="0;2;0;0"/>
-                </circle>
-                <circle cx="20" cy="12" r="2" fill="currentColor">
-                    <animate attributeName="r" begin="0" calcMode="spline" dur="1.5s" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" repeatCount="indefinite" values="0;2;0;0"/>
-                </circle>
-            </svg>
-        {/if}
-          </div>
+            <div class="message {message.id % 2 === 0 ? 'grey-background' : ''}">
+                {#if message.id % 2 === 0}
+                    <svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="7" r="4" />
+                        <path d="M2 20a15.6 15.6 0 0 1 7-6.5 4 4 0 0 1 5.33 0A15.6 15.6 0 0 1 22 20z" />
+                    </svg>
+                {/if}
+                <div class="typing-animation">{message.content}</div>
+                {#if waitingForResponse && message.id === messages[messages.length - 1].id}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
+                        <circle cx="4" cy="12" r="2" fill="currentColor">
+                            <animate attributeName="r" begin=".67" calcMode="spline" dur="1.5s" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" repeatCount="indefinite" values="0;2;0;0"/>
+                        </circle>
+                        <circle cx="12" cy="12" r="2" fill="currentColor">
+                            <animate attributeName="r" begin=".33" calcMode="spline" dur="1.5s" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" repeatCount="indefinite" values="0;2;0;0"/>
+                        </circle>
+                        <circle cx="20" cy="12" r="2" fill="currentColor">
+                            <animate attributeName="r" begin="0" calcMode="spline" dur="1.5s" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" repeatCount="indefinite" values="0;2;0;0"/>
+                        </circle>
+                    </svg>
+                {/if}
+            </div>
         {/each}
-    
         <div class="message-input-container">
           <input type="text" bind:value="{inputText}" placeholder="Type your message..." class="message-input">          
 
-          <svg class="send-icon" role="button" tabindex="0" on:click="{sendMessage}" on:keydown="{handleKeyPress}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="send-icon {waitingForResponse ? 'disabled' : ''}" role="button" tabindex="0" on:click="{sendMessage}" on:keydown="{handleKeyPress}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="22" y1="2" x2="11" y2="13" />
             <polygon points="22 2 15 22 11 13 2 9 22 2" />
           </svg>
@@ -300,6 +333,9 @@
     <aside class="profile">
       <div class="profile-tabs">
         <span class="profile-tab">{profile.name}</span>
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
+        <span class="profile-tab {waitingForResponse ? 'disabled' : ''}" role="button" tabindex="0" on:click={waitingForResponse ? null : handleClearChat}>Clear Chat</span>
     </div>
     
 

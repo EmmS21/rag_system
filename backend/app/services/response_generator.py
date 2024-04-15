@@ -10,10 +10,14 @@ class ResponseGenerator:
         self.model = model
         self.client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-    async def generate(self, input_text, query):
-        prompt = (f"Given the following detailed context and other information you have access to, "
-                  f"'{query}'. Explain things back to me simply, assuming I do not have "
-                  f"a legal background.\n\nContext:\n{input_text}")
+    # async def generate(self, input_text, query):
+    async def generate(self, rag_context, curr_query, chat_history):
+        prompt = (
+            f"Given the following detailed context and other information you have access to, "
+            f"'{curr_query}'. Explain back to me simply, assuming I do not have a legal background.\n\n"
+            f"Chat History:\n{chat_history}\n\n"  
+            f"Context:\n{rag_context}"
+        )
         response = self.client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model=self.model,
