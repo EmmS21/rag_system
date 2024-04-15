@@ -10,7 +10,10 @@ app = FastAPI(title="Colombia Real Estate Legal ChatBot API", version="1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  
+    allow_origins=[
+        "http://localhost:5173",  
+        "https://propabroad.vercel.app"  
+    ],  
     allow_credentials=True,
     allow_methods=["POST", "GET"],
     allow_headers=["*"],  
