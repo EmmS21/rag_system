@@ -290,6 +290,29 @@
     .profile-tab.disabled {
         cursor: default;
     }
+
+    @media (min-width: 768px) {
+        .profile {
+            width: 20%;
+            border-left: 1px solid #dddddd;
+            border-top: none;
+        }
+
+        .profile-tab {
+            padding: 0.1em 1em;
+            margin: 0;
+        }
+
+        .profile-tabs {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 10px;
+        }
+
+        .profile-image, .profile-info, .profile-tab {
+            display: block;
+        }
+    }
   </style>
   
   <svelte:head>
@@ -339,10 +362,9 @@
     
     <aside class="profile">
       <div class="profile-tabs">
-        <span class="profile-tab">{profile.name}</span>
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <!-- svelte-ignore a11y-no-static-element-interactions -->
-        <span class="profile-tab {waitingForResponse ? 'disabled' : ''}" role="button" tabindex="0" on:click={waitingForResponse ? null : handleClearChat}>Clear Chat</span>
+        <span class="profile-tab clear-chat {waitingForResponse ? 'disabled' : ''}" role="button" tabindex="0" on:click={waitingForResponse ? null : handleClearChat}>Clear Chat</span>
     </div>
     
 
