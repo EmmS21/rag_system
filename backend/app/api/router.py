@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from api.models import Query, ExtendedQuery
+from .models import Query, ExtendedQuery
 from rag.rag_workflow import rag_workflow 
-from app.services.response_generator import ResponseGenerator
+from services.response_generator import ResponseGenerator
 from uuid import uuid4
 
 router = APIRouter()
