@@ -1,6 +1,6 @@
 import spacy
 
-nlp = spacy.load("xx_ent_wiki_sm")
+nlp = spacy.load('xx_ent_wiki_sm', disable=['parser', 'ner'])  x
 
 if 'sentencizer' not in nlp.pipe_names:
     sentencizer = nlp.add_pipe('sentencizer')
