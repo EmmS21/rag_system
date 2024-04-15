@@ -51,7 +51,7 @@
         waitingForResponse = true;
         messages = [...messages, { id: activeMessageId, content: "" }];
 
-        const response = await fetch('http://localhost:8000/query/', {
+        const response = await fetch('https://propabroad.onrender.com/query/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -66,7 +66,7 @@
             const data = await response.json();
             const queryId = data.query_id;
 
-            const eventSource = new EventSource(`http://localhost:8000/stream/${queryId}/`);
+            const eventSource = new EventSource(`https://propabroad.onrender.com/stream/${queryId}/`);
             eventSource.onmessage = function(event) {
                 waitingForResponse = false;
                 ongoingMessageContent += event.data + "\n"; 
