@@ -4,8 +4,8 @@ spacy
 transformers
 torch
 pymongo
-PyMuPDF==1.18.19  
 numpy
 pydantic
 fastapi
 uuid
+uvicorn==0.22.0
