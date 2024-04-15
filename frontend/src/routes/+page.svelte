@@ -376,7 +376,7 @@
     </aside>
     <footer>
         <div class="footer-section">
-            <p style="color: #777;">@2024 PropAbroad built by Emmanuel Sibanda</p>
+            <p style="color: #777;">@2024 Built by Emmanuel Sibanda</p>
         </div>
         <div class="footer-section" style="margin-left: 20px;">
             <a href="https://twitter.com/Emmoemm" class="footer-icon" target="_blank">
