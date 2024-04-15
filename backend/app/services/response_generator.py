@@ -14,7 +14,7 @@ class ResponseGenerator:
     async def generate(self, rag_context, curr_query, chat_history):
         prompt = (
             f"Given the following detailed context and other information you have access to, "
-            f"'{curr_query}'. Explain back to me simply, assuming I do not have a legal background.\n\n"
+            f"'{curr_query}'. Explain back to me in detail using the context and chat history, assuming I do not have a legal background.\n\n"
             f"Chat History:\n{chat_history}\n\n"  
             f"Context:\n{rag_context}"
         )
@@ -28,4 +28,5 @@ class ResponseGenerator:
                 if chunk.choices[0].delta.content is not None:
                     yield f"data: {chunk.choices[0].delta.content}\n\n"
         finally:
-            yield "event: end-of-stream\ndata: end\n\n"  # Signal the end of the stream
+            yield "event: end-of-stream\ndata: end\n\n" 
+

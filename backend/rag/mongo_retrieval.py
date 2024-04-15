@@ -36,7 +36,6 @@ def process_document(document, embeddings, query_embedding, min_similarity):
         for segment_id, segment_embedding in embeddings[document_id].items():
             similarity = np.dot(segment_embedding, query_embedding) / (np.linalg.norm(segment_embedding) * np.linalg.norm(query_embedding))
             segment_similarities.append((segment_id, similarity))
-            # print(f"Document ID: {document_id}, Segment ID: {segment_id}, Similarity: {similarity:.4f}")  # Debug similarity with 4 decimal places
         segment_similarities.sort(key=lambda x: x[1], reverse=True)
         relevant_segments = [segment_id for segment_id, similarity in segment_similarities if similarity >= min_similarity]
         # print(f"Relevant segments for Document ID {document_id} with similarities: {[(s[0], round(s[1], 4)) for s in segment_similarities if s[1] >= min_similarity]}")  # Debug relevant segments
@@ -45,8 +44,10 @@ def process_document(document, embeddings, query_embedding, min_similarity):
     return None
 
 def retrieve_relevant_documents(query, top_n=5, num_candidates=50, min_similarity=0.1):
-    query_embedding = generate_embeddings(query)["segment_0"]  # Assuming the query is a single segment
-    query_embedding_np = np.array(query_embedding)
+    query_embedding_0 = generate_embeddings(query)["segment_0"]  
+    query_embedding_1 = generate_embeddings(query)["segment_1"]  
+    query_embedding_np_0 = np.array(query_embedding_0)
+    query_embedding_np_1 = np.array(query_embedding_1)
 
     # Fetch candidate documents and prefetch all embeddings
     candidates = list(collection.find({}, {"full_text": 1}))
@@ -54,9 +55,13 @@ def retrieve_relevant_documents(query, top_n=5, num_candidates=50, min_similarit
 
     relevant_documents = []
     for candidate in candidates[:num_candidates]:
-        result = process_document(candidate, embeddings, query_embedding_np, min_similarity)
-        if result:
-            relevant_documents.append(result)
+        result_0 = process_document(candidate, embeddings, query_embedding_np_0, min_similarity)
+        result_1 = process_document(candidate, embeddings, query_embedding_np_1, min_similarity)
+        if result_0:
+            relevant_documents.append(result_0)
+        if result_1:
+            relevant_documents.append(result_1)
+
 
     # Sort documents by the highest similarity score of their most relevant segment
     relevant_documents.sort(key=lambda x: x[2], reverse=True)

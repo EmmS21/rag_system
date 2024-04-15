@@ -1,6 +1,13 @@
 <script lang="ts">
     import { onMount, afterUpdate } from 'svelte';
-    let messages = [
+
+    interface Message {
+        id: number;
+        content: string;
+        sentByUser?: boolean;
+    }
+
+    let messages: Message[] = [
       { id: 1, content: "What would you like to learn about buying property in Colombia as a foreign national?" },
     ];
 
@@ -33,10 +40,10 @@
     
     async function sendMessage() {
         if (inputText.trim() === '') return;
-        const newMessage = { id: activeMessageId, content: inputText };
+        const newMessage = { id: activeMessageId, content: inputText, sentByUser: true };
         messages = [...messages, newMessage];
-        activeMessageId++;
         inputText = '';
+        activeMessageId++;
 
         const userQueries = messages.filter(msg => msg.id % 2 !== 0).map(msg => msg.content);
         userQueries.push(inputText);  
@@ -297,8 +304,8 @@
   <main>
     <div class="chat" bind:this={chatContainer}>
         {#each messages as message}
-            <div class="message {message.id % 2 === 0 ? 'grey-background' : ''}">
-                {#if message.id % 2 === 0}
+            <div class="message {message.sentByUser ? 'grey-background' : ''}">
+                {#if message.sentByUser}
                     <svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="7" r="4" />
                         <path d="M2 20a15.6 15.6 0 0 1 7-6.5 4 4 0 0 1 5.33 0A15.6 15.6 0 0 1 22 20z" />
